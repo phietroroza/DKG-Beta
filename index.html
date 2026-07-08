@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRIFT PRO 3D - R34 EDITION</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: white; }
+        #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        
+        .top-left { position: absolute; top: 20px; left: 20px; }
+        .top-right { position: absolute; top: 20px; right: 20px; pointer-events: auto; display: flex; gap: 10px; }
+        
+        .drift-hud { background: rgba(0,0,0,0.7); padding: 15px 25px; border-radius: 10px; border-left: 5px solid #ff9500; }
+        #drift-points { font-size: 48px; font-weight: bold; margin: 0; }
+        #multiplier { font-size: 20px; color: #ff9500; }
+        #drift-indicator { font-size: 24px; font-weight: bold; color: #ff9500; display: none; margin-top: 5px; text-shadow: 0 0 10px #ff9500; }
+
+        .time-controls { display: flex; gap: 10px; }
+        .time-btn { background: #333; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; pointer-events: auto; }
+        .time-btn:hover { background: #555; }
+        .time-btn.active { background: #ff9500; }
+
+        .bottom-hud { position: absolute; bottom: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .stats-box { background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px; min-width: 150px; }
+        .stat-label { font-size: 12px; color: #aaa; text-transform: uppercase; }
+        #money { font-size: 24px; color: #4cd137; font-weight: bold; }
+        
+        .controls-hint { font-size: 14px; color: #888; text-align: center; line-height: 1.6; }
+
+        #speedometer { background: rgba(0,0,0,0.8); padding: 20px; border-radius: 15px; border-right: 5px solid #ff9500; text-align: right; }
+        #fps-counter { position: absolute; top: 20px; left: 250px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 5px; font-family: monospace; color: #0f0; font-size: 14px; border: 1px solid #333; }
+        #speed-val { font-size: 64px; font-weight: bold; line-height: 1; }
+        #gear-val { font-size: 24px; color: #ff9500; margin-left: 10px; }
+        .unit { font-size: 18px; color: #888; }
+
+        /* GARAGEM */
+        #garage-overlay { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.85); display: none; flex-direction: column; 
+            align-items: center; justify-content: center; pointer-events: auto; 
+        }
+        .garage-menu { 
+            background: #1a1a1a; padding: 40px; border-radius: 20px; 
+            border: 2px solid #333; width: 520px; 
+        }
+        .garage-title { font-size: 32px; font-weight: bold; margin-bottom: 30px; text-align: center; color: #ff9500; }
+        .garage-section { margin-bottom: 25px; }
+        .section-label { display: block; margin-bottom: 15px; font-weight: bold; color: #ccc; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .control-group { display: flex; align-items: center; gap: 20px; margin-bottom: 15px; background: #222; padding: 10px; border-radius: 10px; }
+        .control-group input[type="color"] { border: none; width: 50px; height: 50px; cursor: pointer; background: none; }
+        .control-group input[type="range"] { flex: 1; cursor: pointer; accent-color: #ff9500; }
+        .control-name { width: 100px; font-size: 14px; }
+
+        .garage-btn { 
+            display: block; width: 100%; padding: 14px; margin-bottom: 12px; 
+            border: 2px solid #444; border-radius: 10px; background: #222; 
+            color: #fff; font-size: 16px; font-weight: bold; cursor: pointer; 
+            transition: 0.3s; text-align: center;
+        }
+        .garage-btn:hover { border-color: #ff9500; background: #333; }
+        .garage-btn.purchased { background: #2ecc71; border-color: #2ecc71; color: #fff; }
+        .garage-btn.disabled { background: #555; color: #999; cursor: not-allowed; border-color: #555; }
+        
+        #loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; align-items: center; justify-content: center; z-index: 100; font-size: 24px; }
+
+        /* SETTINGS MENU */
+        #settings-menu { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; overflow-y: auto; }
+        
+        .settings-container { background: #1a1a1a; padding: 30px; border-radius: 15px; border: 2px solid #333; width: 600px; text-align: center; }
+        .settings-title { font-size: 28px; color: #ff9500; margin-bottom: 25px; font-weight: bold; }
+        
+        .setting-row { background: #222; padding: 15px; margin-bottom: 15px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .setting-label { font-weight: bold; color: #fff; text-transform: uppercase; }
+        
+        .quality-options { display: flex; gap: 5px; }
+        .quality-opt-btn { background: #333; border: 2px solid #444; color: #aaa; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .quality-opt-btn:hover { background: #444; color: #fff; }
+        .quality-opt-btn.active { background: #ff9500; color: #fff; border-color: #ff9500; }
+    </style>
+</head>
+<body>
+    <div id="loading">CARREGANDO R34...</div>
+
+    <!-- MENU DE CONFIGURAÇÕES (ESC) -->
+    <div id="settings-menu">
+        <div class="settings-container">
+            <div class="settings-title">QUALIDADE PERSONALIZADA</div>
+            
+            <div class="setting-row">
+                <span class="setting-label">Renderização do Mapa</span>
+                <div class="quality-options" id="setting-map">
+                    <button class="quality-opt-btn" data-value="low" onclick="setSetting('map', 'low')">LOW</button>
+                    <button class="quality-opt-btn" data-value="medium" onclick="setSetting('map', 'medium')">MEDIUM</button>
+                    <button class="quality-opt-btn" data-value="high" onclick="setSetting('map', 'high')">HIGH</button>
+                </div>
+            </div>
+
+            <div class="setting-row">
+                <span class="setting-label">Qualidade Geral</span>
+                <div class="quality-options" id="setting-quality">
+                    <button class="quality-opt-btn" data-value="low" onclick="setSetting('quality', 'low')">LOW</button>
+                    <button class="quality-opt-btn" data-value="medium" onclick="setSetting('quality', 'medium')">MEDIUM</button>
+                    <button class="quality-opt-btn" data-value="high" onclick="setSetting('quality', 'high')">HIGH</button>
+                </div>
+            </div>
+
+            <div class="setting-row">
+                <span class="setting-label">Fumaça</span>
+                <div class="quality-options" id="setting-smoke">
+                    <button class="quality-opt-btn" data-value="off" onclick="setSetting('smoke', 'off')">OFF</button>
+                    <button class="quality-opt-btn" data-value="low" onclick="setSetting('smoke', 'low')">LOW</button>
+                    <button class="quality-opt-btn" data-value="medium" onclick="setSetting('smoke', 'medium')">MEDIUM</button>
+                    <button class="quality-opt-btn" data-value="high" onclick="setSetting('smoke', 'high')">HIGH</button>
+                </div>
+            </div>
+
+            <div class="setting-row">
+                <span class="setting-label">Luzes</span>
+                <div class="quality-options" id="setting-lights">
+                    <button class="quality-opt-btn" data-value="low" onclick="setSetting('lights', 'low')">LOW</button>
+                    <button class="quality-opt-btn" data-value="medium" onclick="setSetting('lights', 'medium')">MEDIUM</button>
+                    <button class="quality-opt-btn" data-value="high" onclick="setSetting('lights', 'high')">HIGH</button>
+                </div>
+            </div>
+
+            <div class="setting-row">
+                <span class="setting-label">Qualidade dos Veículos</span>
+                <div class="quality-options" id="setting-vehicles">
+                    <button class="quality-opt-btn" data-value="low" onclick="setSetting('vehicles', 'low')">LOW</button>
+                    <button class="quality-opt-btn" data-value="medium" onclick="setSetting('vehicles', 'medium')">MEDIUM</button>
+                    <button class="quality-opt-btn" data-value="high" onclick="setSetting('vehicles', 'high')">HIGH</button>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <button class="time-btn active" onclick="toggleSettings()" style="width: 100%; padding: 15px;">FECHAR CONFIGURAÇÕES</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="ui">
+        <!-- MINIMAPA -->
+        <div id="minimap-container" style="position: absolute; top: 20px; right: 20px; width: 180px; height: 180px; background: rgba(0,0,0,0.8); border: 3px solid #ff9500; border-radius: 15px; overflow: hidden; pointer-events: auto; cursor: pointer;" onclick="toggleBigMap()">
+            <canvas id="minimap-canvas" width="180" height="180"></canvas>
+            <div style="position: absolute; bottom: 5px; width: 100%; text-align: center; color: #ff9500; font-size: 10px; font-weight: bold; text-shadow: 1px 1px 2px #000;">MAPA (M)</div>
+        </div>
+
+        <!-- MAPA GRANDE -->
+        <div id="big-map-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto;">
+            <h1 style="color: #ff9500; margin-bottom: 20px; font-size: 32px;">MAPA DKG - DRIFT KING GAME</h1>
+            <div style="position: relative; background: #111; border: 5px solid #ff9500; border-radius: 20px; overflow: hidden; box-shadow: 0 0 50px rgba(255,149,0,0.3);">
+                <canvas id="big-map-canvas" width="900" height="650"></canvas>
+            </div>
+            <button class="time-btn active" onclick="toggleBigMap()" style="margin-top: 20px; width: 250px; font-size: 18px; padding: 15px;">FECHAR MAPA (M)</button>
+        </div>
+
+        <div id="fps-counter">FPS: 60</div>
+        <div class="top-left">
+            <div class="drift-hud">
+                <p id="drift-points">0</p>
+                <span id="multiplier">x1.0</span>
+                <div id="drift-indicator">DRIFT!</div>
+            </div>
+        </div>
+
+        <div class="top-right" style="right: 220px;">
+            <div class="time-controls">
+                <button class="time-btn" onclick="setTimeOfDay('dia')">DIA</button>
+                <button class="time-btn" onclick="setTimeOfDay('tarde')">TARDE</button>
+                <button class="time-btn active" onclick="setTimeOfDay('noite')">NOITE</button>
+            </div>
+        </div>
+
+        <div class="bottom-hud">
+            <div class="stats-box">
+                <div class="stat-label">Saldo Disponível</div>
+                <div id="money">$ 0</div>
+            </div>
+            <div class="controls-hint">
+                W/A/S/D: DIRIGIR | ESPAÇO: FREIO DE MÃO<br>
+                Q/E: MARCHAS | O: CÂMERA | ESC: CONFIG | P: GARAGEM | M: MAPA
+            </div>
+            <div id="speedometer">
+                <span id="speed-val">0</span><span id="gear-val">1</span>
+                <div class="unit">KM/H</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GARAGEM DE CUSTOMIZAÇÃO -->
+    <div id="garage-overlay">
+        <div class="garage-menu">
+            <div class="garage-title">CUSTOMIZAÇÃO</div>
+            <div class="garage-balance" id="g-money" style="text-align: center; font-size: 24px; color: #4cd137; margin-bottom: 20px;">$ 0</div>
+            
+            <div class="garage-section">
+                <span class="section-label">Compre as Tunagens ($5000 cada)</span>
+                <button class="garage-btn" data-type="neon" onclick="handleBuyUpgrade('neon')">COMPRAR - $5000</button>
+                <button class="garage-btn" data-type="frontLights" onclick="handleBuyUpgrade('frontLights')">COMPRAR - $5000</button>
+                <button class="garage-btn" data-type="tailLights" onclick="handleBuyUpgrade('tailLights')">COMPRAR - $5000</button>
+                <button class="garage-btn" data-type="bodyColor" onclick="handleBuyUpgrade('bodyColor')">COMPRAR - $5000</button>
+            </div>
+
+            <div class="garage-section">
+                <span class="section-label">Pintura da Carroceria</span>
+                <div class="control-group">
+                    <span class="control-name">Cor Base</span>
+                    <input type="color" id="body-color" value="#0000ff" oninput="updateBodyColor(this.value)">
+                </div>
+            </div>
+
+            <div class="garage-section">
+                <span class="section-label">Iluminação</span>
+                
+                <div class="control-group">
+                    <span class="control-name">Neon</span>
+                    <input type="color" id="neon-color" value="#ff0000" oninput="updateLightColor('neon', this.value)">
+                    <input type="range" id="neon-intensity-slider" min="0" max="100" value="40" oninput="updateLightIntensity('neon', this.value)">
+                </div>
+
+                <div class="control-group">
+                    <span class="control-name">Faróis</span>
+                    <input type="color" id="front-color" value="#ffffff" oninput="updateLightColor('front', this.value)">
+                    <input type="range" id="front-intensity-slider" min="0" max="100" value="25" oninput="updateLightIntensity('front', this.value)">
+                </div>
+
+                <div class="control-group">
+                    <span class="control-name">Lanternas</span>
+                    <input type="color" id="tail-color" value="#ff0000" oninput="updateLightColor('tail', this.value)">
+                    <input type="range" id="tail-intensity-slider" min="0" max="200" value="100" oninput="updateLightIntensity('tail', this.value)">
+                </div>
+            </div>
+
+            <p style="text-align: center; color: #666; font-size: 12px; margin-top: 20px;">Aperte P para voltar a dirigir</p>
+        </div>
+    </div>
+
+    <!-- Bibliotecas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+
+    <!-- Scripts do Jogo -->
+    <script src="js/chunks.js"></script>
+    <script src="js/drift.js"></script>
+    <script src="js/carLoader.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
